@@ -1,5 +1,15 @@
 {
     "configurations": [
+        
+        {
+            "name": "Kubernetes: Run/Debug",
+            "type": "cloudcode.kubernetes",
+            "request": "launch",
+            "skaffoldConfig": "${workspaceFolder}/skaffold.yaml",
+            "watch": true,
+            "cleanUp": true,
+            "portForward": true
+        },
         {
             "name": "Attach to Kubernetes Pod (Go)",
             "type": "cloudcode.kubernetes",
