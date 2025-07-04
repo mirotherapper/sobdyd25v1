@@ -1,0 +1,97 @@
+{
+    "configurations": [
+        {
+            "name": "Attach to Kubernetes Pod (Go)",
+            "type": "cloudcode.kubernetes",
+            "request": "attach",
+            "language": "Go",
+            "debugPort": 2345,
+            "podSelector": {
+                "app": "deployment-name"
+            },
+            "localRoot": "${workspaceFolder}",
+            "remoteRoot": "Path to the Remote Directory Containing the Program"
+        },
+        {
+            "name": "Cloud Run: Run/Debug Locally",
+            "type": "cloudcode.cloudrun",
+            "request": "launch",
+            "build": {
+                "buildpacks": {
+                    "path": "package.json",
+                    "builder": "gcr.io/buildpacks/builder:v1"
+                }
+            },
+            "image": "stayonbeat-new",
+            "service": {
+                "name": "stayonbeat-new",
+                "containerPort": 8080,
+                "serviceAccountName": "mirothedj@gmail.com",
+                "resources": {
+                    "limits": {
+                        "memory": "256Mi"
+                    }
+                }
+            },
+            "target": {
+                "minikube": {}
+            },
+            "watch": true,
+            "externalPortForward": 3000
+        },
+        {
+            "name": "Cloud Run: Run/Debug Locally",
+            "type": "cloudcode.cloudrun",
+            "request": "launch",
+            "build": {
+                "buildpacks": {
+                    "path": "package.json",
+                    "builder": "gcr.io/buildpacks/builder:v1"
+                }
+            },
+            "image": "stayonbeat-new",
+            "service": {
+                "name": "stayonbeat-new",
+                "containerPort": 8080,
+                "serviceAccountName": "mirothedj@gmail.com",
+                "resources": {
+                    "limits": {
+                        "memory": "256Mi"
+                    }
+                }
+            },
+            "target": {
+                "minikube": {}
+            },
+            "watch": true,
+            "externalPortForward": 3000
+        },
+        {
+            "name": "Cloud Run: Run/Debug Locally",
+            "type": "cloudcode.cloudrun",
+            "request": "launch",
+            "build": {
+                "buildpacks": {
+                    "path": "package.json",
+                    "builder": "gcr.io/buildpacks/builder:v1"
+                }
+            },
+            "image": "stayonbeat-new",
+            "service": {
+                "name": "stayonbeat-new",
+                "containerPort": 8080,
+                "serviceAccountName": "mirothedj@gmail.com",
+                "resources": {
+                    "limits": {
+                        "memory": "256Mi"
+                    }
+                }
+            },
+            "target": {
+                "minikube": {}
+            },
+            "watch": true,
+            "externalPortForward": 3000
+        }
+    ]
+}
