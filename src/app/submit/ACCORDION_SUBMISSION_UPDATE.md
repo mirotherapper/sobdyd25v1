@@ -136,8 +136,8 @@ src/components/playlist-system/submission/
 ## Files Modified
 
 1. `src/app/submit/page.tsx` - Complete redesign with accordion interface
-2. `src/components/playlist-system/submission/tier-accordion-cards.tsx` - New component
-3. `src/components/playlist-system/submission/promotional-banner.tsx` - New component
+2. `src/app/submit/tier-accordion-cards.tsx` - New component
+3. `src/app/submit/promotional-banner.tsx` - New component
 
 ## Backup Information
 

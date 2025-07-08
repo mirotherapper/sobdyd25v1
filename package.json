@@ -15,13 +15,17 @@
     "@clerk/clerk-sdk-node": "^5.1.6",
     "@clerk/nextjs": "^6.23.2",
     "@gsap/react": "^2.1.2",
-    "@hello-pangea/dnd": "^18.0.1",
+    "@next/bundle-analyzer": "^15.3.5",
+    "@paypal/react-paypal-js": "^8.5.0",
+    "dotenv": "^17.1.0",
     "gsap": "^3.13.0",
+    "lucide-react": "^0.417.0",
     "mongodb": "^6.17.0",
     "mongoose": "^8.16.1",
     "next": "15.3.4",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "react-hot-toast": "^2.4.1"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

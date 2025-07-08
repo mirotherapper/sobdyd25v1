@@ -1,58 +1,47 @@
-"use client";
+/* DESIGN RECREATED FROM BACKUP - UTILIZING ENHANCED FORM */
 
-import React, { useState } from 'react';
-import { useUser } from '@clerk/nextjs';
-import toast, { Toaster } from 'react-hot-toast';
+import { TierAccordionCards } from "@/components/playlist-system/submission/tier-accordion-cards";
+import { PromotionalBanner } from "@/components/playlist-system/submission/promotional-banner";
+import { Suspense } from "react";
 
 export default function SubmitPage() {
-  const { isSignedIn } = useUser();
-  const [trackUrl, setTrackUrl] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!isSignedIn) {
-      toast.error('You must be signed in to submit a track.');
-      return;
-    }
-    setIsSubmitting(true);
-    // Here you would add your API call logic
-    // e.g., await fetch('/api/submissions', { method: 'POST', ... });
-    toast.success(`Submitting track: ${trackUrl}`);
-    setTimeout(() => {
-      setIsSubmitting(false);
-      setTrackUrl('');
-    }, 1000);
-  };
-
   return (
     <div
-      className="min-h-screen text-white p-8 flex flex-col items-center justify-center"
-      style={{ background: 'linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%)' }}
+      className="min-h-screen relative overflow-hidden text-white bg-black"
     >
-      <Toaster position="top-center" />
-      <div className="w-full max-w-md p-8 rounded-xl bg-[rgba(26,26,46,0.7)] backdrop-blur-[20px] border border-[rgba(255,255,255,0.2)]">
-        <h1 className="text-3xl font-bold mb-6 text-center text-cyan-400">Submit a Track</h1>
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label htmlFor="trackUrl" className="block text-sm font-medium text-gray-300 mb-2">
-              SoundCloud or YouTube URL
-            </label>
-            <input
-              id="trackUrl"
-              type="url"
-              value={trackUrl}
-              onChange={(e) => setTrackUrl(e.target.value)}
-              placeholder="https://soundcloud.com/..."
-              required
-              className="w-full px-4 py-2 bg-gray-900/50 border border-gray-700 rounded-lg focus:ring-cyan-500 focus:border-cyan-500"
-            />
+      {/* Background Element with Grid and Horizon Effect */}
+      <div
+        className="absolute inset-0 z-0"
+        style={{
+          backgroundImage: `
+            linear-gradient(to top, transparent, rgba(0, 255, 255, 0.05), transparent),
+            url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1IiBoZWlnaHQ9IjUiPgo8cmVjdCB3aWR0aD0iNSIgaGVpZ2h0PSI1IiBmaWxsPSIjZmZmIiBmaWxsLW9wYWNpdHk9IjAuMDIiPjwvcmVjdD4KPC9zdmc+'),
+            linear-gradient(to bottom, black, rgba(128, 0, 128, 0.3), black)
+          `,
+          transform: 'perspective(1000px) rotateX(80deg)',
+          transformOrigin: 'bottom',
+          bottom: '-5%',
+          opacity: 0.7,
+        }}
+      />
+      
+      <div className="container mx-auto px-4 pt-24 pb-32 relative z-10">
+        <div className="max-w-[615px] mx-auto">
+          {/* Tier Selection Cards */}
+          <Suspense fallback={
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-400"></div>
+              <span className="ml-3 text-cyan-400">Loading submission tiers...</span>
+            </div>
+          }>
+            <TierAccordionCards />
+          </Suspense>
+
+          {/* Promotional Banner */}
+          <div className="mt-8">
+            <PromotionalBanner />
           </div>
-          <button type="submit" disabled={isSubmitting || !isSignedIn} className="w-full py-3 px-4 bg-cyan-500 font-semibold rounded-lg hover:bg-cyan-400 disabled:bg-gray-600 transition-colors">
-            {isSubmitting ? 'Submitting...' : 'Submit Track'}
-          </button>
-          {!isSignedIn && <p className="text-center text-sm text-yellow-500">Please sign in to enable submission.</p>}
-        </form>
+        </div>
       </div>
     </div>
   );

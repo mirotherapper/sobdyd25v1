@@ -49,6 +49,7 @@ export interface PlaylistItemData {
   tier: 'VIP' | 'Skip' | 'GA' | 'Free' | 'Random Reset';
   rating?: number; // Host rating (e.g., 0-100)
   submission_id?: string; // Reference to the original submission if applicable
+  guestRatings?: { userId: string; rating: number; }[]; // Guest ratings from listeners
 }
 
 // Consolidated PlaylistData (from library page)

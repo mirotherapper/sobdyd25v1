@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { detectPlatform, extractMetadata } from '../../../../lib/url-utils';
+import { detectPlatform, extractMetadata } from '../../../lib/url-utils';
 
 interface TrackPreview {
   platform: string;
@@ -13,11 +13,7 @@ interface TrackPreview {
 export interface Tier {
   id: string;
   name: string;
-  price: number; // in cents
-  icon: string;
-  iconType: string;
-  description: string;
-  features: string[];
+  price: number;
 }
 
 export type MessageType = 'success' | 'error' | 'info';
@@ -54,7 +50,6 @@ export const useSubmissionForm = ({
   const [expandedTier, setExpandedTier] = useState<string | null>(null);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [tierForPayment, setTierForPayment] = useState<Tier | null>(null);
-  const [submissionForPaymentId, setSubmissionForPaymentId] = useState<string | null>(null);
 
   const handleUrlChange = async (newUrl: string) => {
     setUrl(newUrl);
@@ -238,6 +233,5 @@ export const useSubmissionForm = ({
     isPaymentModalOpen,
     tierForPayment,
     handleClosePaymentModal,
-    submissionForPaymentId,
   };
 };

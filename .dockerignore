@@ -1,0 +1,9 @@
+**/node_modules
+**/Dockerfile
+**/.dockerignore
+**/.git
+**/.next
+**/README.md
+**.env*
+**/docker-compose.ymlmongodb://root:password@localhost:27017/?authSource=admin
+mongodb://root:password@localhost:27017/?authSource=admin

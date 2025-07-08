@@ -14,7 +14,7 @@ export async function POST(request: Request) {
     }
 
     // --- Check for lock status before proceeding ---
-    const livePlaylistForLockCheck = await db.collection<PlaylistData>('playlists').findOne({ is_show_archive: { $ne: true } });
+    const livePlaylistForLockCheck = await db.collection('playlists').findOne({ is_show_archive: { $ne: true } });
 
     if (livePlaylistForLockCheck?.is_locked) {
       // Prevent moving a locked track out of its position
@@ -30,7 +30,7 @@ export async function POST(request: Request) {
     // --- Main Logic: Moving a Submission to the Queue ---
     if (source.droppableId === 'submissions' && destination.droppableId === 'queue') {
       // 1. Find the original submission
-      const submission = await db.collection<SubmissionData>('submissions').findOne({
+      const submission = await db.collection('submissions').findOne({
         _id: new ObjectId(draggableId)
       });
 
@@ -60,11 +60,12 @@ export async function POST(request: Request) {
         },
         status: 'queued',
         tier: submission.submissionType,
-        submission_id: submission._id,
+        submission_id: submission._id.toString(),
       };
 
       // 4. Atomically update both collections
-      const session = db.client.startSession();
+      const { client } = await connectToDatabase();
+      const session = client.startSession();
       try {
         await session.withTransaction(async () => {
           // Mark submission as approved
@@ -77,7 +78,7 @@ export async function POST(request: Request) {
           // Add the new item to the playlist's items array
           await db.collection('playlists').updateOne(
             { _id: new ObjectId(livePlaylist._id) },
-            { $push: { items: { $each: [newPlaylistItem], $position: destination.index } } },
+            { $push: { items: { $each: [newPlaylistItem], $position: destination.index } } } as any,
             { session }
           );
         });
@@ -90,7 +91,7 @@ export async function POST(request: Request) {
 
     // --- Logic for reordering within the queue ---
     if (source.droppableId === 'queue' && destination.droppableId === 'queue') {
-      const livePlaylist = await db.collection<PlaylistData>('playlists').findOne({ is_show_archive: { $ne: true } });
+      const livePlaylist = await db.collection('playlists').findOne({ is_show_archive: { $ne: true } });
 
       if (!livePlaylist) {
         return NextResponse.json({ message: 'Live playlist not found' }, { status: 404 });
@@ -98,10 +99,10 @@ export async function POST(request: Request) {
 
       const allItems = livePlaylist.items || [];
       // Separate the items into 'queued' and 'other' to safely reorder the queue
-      const queuedItems = allItems.filter(item => item.status === 'queued').sort((a, b) => a.position - b.position);
-      const otherItems = allItems.filter(item => item.status !== 'queued');
+      const queuedItems = allItems.filter((item: any) => item.status === 'queued').sort((a: any, b: any) => a.position - b.position);
+      const otherItems = allItems.filter((item: any) => item.status !== 'queued');
 
-      const movedItemIndex = queuedItems.findIndex(item => item._id === draggableId);
+      const movedItemIndex = queuedItems.findIndex((item: any) => item._id === draggableId);
       if (movedItemIndex === -1) {
         return NextResponse.json({ message: 'Track to move not found in queue. State may be out of sync.' }, { status: 404 });
       }
@@ -111,7 +112,7 @@ export async function POST(request: Request) {
       queuedItems.splice(destination.index, 0, movedItem);
 
       // Reconstruct the full items array and update the 'position' for every item
-      const newFullItemsList = [...otherItems, ...queuedItems].map((item, index) => ({
+      const newFullItemsList = [...otherItems, ...queuedItems].map((item: any, index: number) => ({
         ...item,
         position: index,
       }));
@@ -127,7 +128,7 @@ export async function POST(request: Request) {
 
     // --- Logic for moving from queue to played ---
     if (source.droppableId === 'queue' && destination.droppableId === 'played') {
-      const livePlaylist = await db.collection<PlaylistData>('playlists').findOne({ is_show_archive: { $ne: true } });
+      const livePlaylist = await db.collection('playlists').findOne({ is_show_archive: { $ne: true } });
 
       if (!livePlaylist) {
         return NextResponse.json({ message: 'Live playlist not found' }, { status: 404 });
@@ -136,7 +137,7 @@ export async function POST(request: Request) {
       let allItems = livePlaylist.items || [];
 
       // Find the item to move by its unique ID
-      const movedItemIndex = allItems.findIndex(item => item._id === draggableId);
+      const movedItemIndex = allItems.findIndex((item: any) => item._id === draggableId);
       if (movedItemIndex === -1) {
         return NextResponse.json({ message: 'Track to move not found. State may be out of sync.' }, { status: 404 });
       }
@@ -146,13 +147,13 @@ export async function POST(request: Request) {
       movedItem.status = 'played';
 
       // 2. Separate remaining items and insert the moved item into the 'played' list at the new index
-      const queuedItems = allItems.filter(item => item.status === 'queued').sort((a, b) => a.position - b.position);
-      const playedItems = allItems.filter(item => item.status === 'played').sort((a, b) => a.position - b.position);
-      const otherItems = allItems.filter(item => item.status !== 'queued' && item.status !== 'played'); // e.g., now_playing
+      const queuedItems = allItems.filter((item: any) => item.status === 'queued').sort((a: any, b: any) => a.position - b.position);
+      const playedItems = allItems.filter((item: any) => item.status === 'played').sort((a: any, b: any) => a.position - b.position);
+      const otherItems = allItems.filter((item: any) => item.status !== 'queued' && item.status !== 'played'); // e.g., now_playing
       playedItems.splice(destination.index, 0, movedItem);
 
       // 3. Reconstruct the full list and recalculate the absolute 'position' for every item
-      const newFullItemsList = [...otherItems, ...queuedItems, ...playedItems].map((item, index) => ({
+      const newFullItemsList = [...otherItems, ...queuedItems, ...playedItems].map((item: any, index: number) => ({
         ...item,
         position: index,
       }));
