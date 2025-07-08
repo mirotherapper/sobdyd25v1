@@ -51,8 +51,8 @@ export function AdminHUD({
   // Continuous animations for the tab's visual effects
   useGSAP(() => {
     gsap.to(scanLineRef.current, { y: 120, duration: 2, repeat: -1, yoyo: true, ease: "none" });
-    gsap.to(ledRef.current, { opacity: 1, scale: 1.2, duration: 1, repeat: -1, yoyo: true, ease: "power2.inOut" });
-
+    gsap.to(ledRef.current, { opacity: 1, scale: 1.2, duration: 1, repeat: -1, yoyo: true, ease: "power1.inOut" });
+  
     if (iconRef.current) {
       if (iconAnimation === 'rotate') {
         gsap.to(iconRef.current, { rotation: 360, duration: 4, repeat: -1, ease: "none" });
@@ -79,19 +79,9 @@ export function AdminHUD({
   };
 
   // Dynamically set styles and classes based on the 'side' prop
-  const tabPositionClass = isLeft ? 'left-0' : 'right-0';
-  const tabStyle = {
-    borderLeft: isLeft ? 'none' : '1px solid rgba(0, 255, 255, 0.4)',
-    borderRight: isLeft ? '1px solid rgba(0, 255, 255, 0.4)' : 'none',
-    borderRadius: isLeft ? '0 12px 12px 0' : '12px 0 0 12px',
-  };
-
-  const panelPositionClass = isLeft ? 'left-0' : 'right-0';
-  const panelStyle = {
-    transform: `translateX(${isLeft ? '-320px' : '320px'})`,
-    borderLeft: isLeft ? 'none' : '1px solid rgba(0, 255, 255, 0.3)',
-    borderRight: isLeft ? '1px solid rgba(0, 255, 255, 0.3)' : 'none',
-  };
+  const tabPositionClass = isLeft ? 'left-0 rounded-r-xl border-r border-cyan-400/40' : 'right-0 rounded-l-xl border-l border-cyan-400/40';
+  const panelPositionClass = isLeft ? 'left-0 -translate-x-full border-r border-cyan-400/30' : 'right-0 translate-x-full border-l border-cyan-400/30';
+  
   
   const chevronPositionClass = isLeft ? 'right-1' : 'left-1';
   const ledPositionClass = isLeft ? 'top-2 right-2' : 'top-2 left-2';
@@ -102,33 +92,17 @@ export function AdminHUD({
       {/* Side Tab */}
       <div
         ref={tabRef}
-        className={`fixed top-1/2 transform -translate-y-1/2 z-50 cursor-pointer ${tabPositionClass}`}
+        className={`fixed top-1/2 -translate-y-1/2 z-50 flex flex-col items-center justify-center w-[60px] h-[120px] cursor-pointer overflow-hidden 
+                   bg-gradient-to-br from-cyan-500/20 via-white/10 to-cyan-500/20 backdrop-blur-xl shadow-[0_0_30px_rgba(0,255,255,0.3)] 
+                   ${tabPositionClass}`}
         onClick={handleClick}
         onMouseEnter={handleHover}
         onMouseLeave={handleHoverOut}
-        style={{
-          background: `linear-gradient(135deg, rgba(0, 255, 255, 0.2), rgba(255, 255, 255, 0.1) 25%, rgba(0, 255, 255, 0.05) 50%, rgba(255, 255, 255, 0.1) 75%, rgba(0, 255, 255, 0.2) 100%)`,
-          backdropFilter: 'blur(20px)',
-          boxShadow: '0 0 30px rgba(0, 255, 255, 0.3)',
-          width: '60px',
-          height: '120px',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          position: 'relative',
-          overflow: 'hidden',
-          ...tabStyle,
-        }}
       >
         {/* Scanning Line Animation */}
         <div
           ref={scanLineRef}
-          className="absolute top-0 left-0 w-full h-1"
-          style={{
-            background: 'linear-gradient(90deg, transparent, #00FFFF, transparent)',
-            boxShadow: '0 0 10px #00FFFF',
-          }}
+          className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-cyan-400 to-transparent shadow-[0_0_10px_#00FFFF]"
         />
 
         {/* Dynamic Icon */}
@@ -137,52 +111,28 @@ export function AdminHUD({
         </div>
 
         {/* Dynamic Text */}
-        <div
-          className="text-xs font-bold tracking-wider"
-          style={{
-            color: '#00FFFF',
-            textShadow: '0 0 8px #00FFFF',
-            writingMode: 'vertical-rl',
-            textOrientation: 'mixed',
-          }}
-        >
+        <div className="text-xs font-bold tracking-wider text-cyan-400 [text-shadow:0_0_8px_#00FFFF] [writing-mode:vertical-rl] [text-orientation:mixed]">
           {label}
         </div>
 
         {/* Chevron Indicator */}
         <div ref={chevronRef} className={`absolute ${chevronPositionClass}`}>
-          <ChevronIcon
-            size={16}
-            style={{
-              color: '#00FFFF',
-              filter: 'drop-shadow(0 0 4px #00FFFF)',
-            }}
-          />
+          <ChevronIcon size={16} className="text-cyan-400 [filter:drop-shadow(0_0_4px_#00FFFF)]" />
         </div>
 
         {/* LED Pulse Effect */}
         <div
           ref={ledRef}
-          className={`absolute w-2 h-2 rounded-full ${ledPositionClass}`}
-          style={{
-            background: '#00FFFF',
-            boxShadow: '0 0 10px #00FFFF',
-            opacity: 0.3,
-          }}
+          className={`absolute w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_10px_#00FFFF] opacity-30 ${ledPositionClass}`}
         />
       </div>
 
       {/* HUD Panel */}
       <div
         ref={panelRef}
-        className={`fixed top-0 h-full z-40 ${panelPositionClass}`}
-        style={{
-          width: '320px',
-          background: `linear-gradient(135deg, rgba(0, 255, 255, 0.15), rgba(255, 255, 255, 0.08) 25%, rgba(0, 255, 255, 0.05) 50%, rgba(255, 255, 255, 0.08) 75%, rgba(0, 255, 255, 0.15) 100%)`,
-          backdropFilter: 'blur(25px)',
-          boxShadow: '0 0 50px rgba(0, 255, 255, 0.2)',
-          ...panelStyle,
-        }}
+        className={`fixed top-0 h-full z-40 w-[320px] 
+                   bg-gradient-to-br from-cyan-500/15 via-white/5 to-cyan-500/15 backdrop-blur-2xl shadow-[0_0_50px_rgba(0,255,255,0.2)]
+                   ${panelPositionClass}`}
       >
         {/* Panel content is passed via children */}
         {children}

@@ -2,9 +2,11 @@ import React from 'react';
 
 export const PromotionalBanner = () => {
   return (
-    <div className="bg-gradient-to-r from-purple-900/40 via-cyan-900/40 to-purple-900/40 backdrop-blur-sm rounded-2xl border border-purple-400/30 p-6 card-hover-effect">
+    <div
+      className="p-6 backdrop-blur-sm rounded-xl border-2 overflow-hidden border-purple-500/80 bg-gradient-to-br from-purple-500/40 via-cyan-500/40 to-purple-500/40 shadow-[0_0_20px_rgba(147,51,234,0.3),inset_0_0_20px_rgba(255,255,255,0.1)]"
+    >
       <div className="text-center">
-        <h3 className="text-2xl font-bold text-white mb-2">
+        <h3 className="text-2xl font-bold text-white mb-2 p-4">
           🎵 Get Your Music Heard Live! 🎵
         </h3>
         <p className="text-gray-300 mb-4">

@@ -1,8 +1,7 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from 'react';
-import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
-import { useSearchParams } from 'next/navigation';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { PayPalScriptProvider, PayPalButtons, OnApproveData, CreateOrderActions } from "@paypal/react-paypal-js";
 export interface Tier {
   id: string;
   name: string;
@@ -19,139 +18,79 @@ import { gsap } from 'gsap';
 
 
 // --- Styles ---
-const animationStyles = `
-  .glass-etched-text {
-    font-family: 'Orbitron', 'Exo 2', 'Rajdhani', 'Russo One', monospace;
-    font-weight: 700;
-    font-size: 1.25rem;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.95);
-    text-shadow:
-      0 0 8px rgba(0, 255, 255, 0.6),
-      0 0 16px rgba(0, 255, 255, 0.4),
-      0 0 24px rgba(0, 255, 255, 0.2),
-      0 1px 2px rgba(0, 0, 0, 0.5);
-    filter: drop-shadow(0 0 4px rgba(0, 255, 255, 0.3));
-  }
-
-  .tier-card-enhanced {
-    transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-    position: relative;
-    overflow: hidden;
-    box-shadow: 0 0 8px rgba(0, 255, 255, 0.3), inset 0 0 1px rgba(0, 255, 255, 0.2);
-  }
-
-  .tier-card-enhanced:hover {
-    transform: translateY(-2px) scale(1.01);
-    box-shadow: 0 10px 30px rgba(0, 255, 255, 0.3), 0 0 25px rgba(139, 92, 246, 0.2), inset 0 0 2px rgba(0, 255, 255, 0.4);
-  }
-
-  .card-hover-effect {
-    position: relative;
-    overflow: hidden;
-    transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-    box-shadow: 0 0 8px rgba(139, 92, 246, 0.3), inset 0 0 1px rgba(139, 92, 246, 0.2);
-  }
-
-  .card-hover-effect:hover {
-    box-shadow: 0 0 15px rgba(139, 92, 246, 0.4), 0 0 25px rgba(0, 255, 255, 0.2), inset 0 0 2px rgba(139, 92, 246, 0.4);
-  }
-
-  .card-hover-effect::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: linear-gradient(90deg, transparent, rgba(0, 255, 255, 0.1), transparent);
-    transform: translateX(-100%);
-    transition: transform 0.6s ease;
-    z-index: 1;
-  }
-
-  .card-hover-effect:hover::before {
-    animation: chasingLight 1.5s ease-in-out forwards;
-  }
-
-  @keyframes chasingLight {
-    0% { transform: translateX(-100%); }
-    100% { transform: translateX(100%); }
-  }
-
-  .expand-glow {
-    animation: expandGlow 1.8s ease-out forwards;
-  }
-
-  .smooth-accordion-expand {
-    animation: smoothAccordionExpand 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
-    overflow: hidden;
-  }
-
-  @keyframes expandGlow {
-    0% {
-      box-shadow: 0 0 0px rgba(0, 255, 255, 0);
-    }
-    100% {
-      box-shadow: 0 0 20px rgba(0, 255, 255, 0.6), 0 0 30px rgba(0, 255, 255, 0.4);
-    }
-  }
-
-  @keyframes smoothAccordionExpand {
-    from {
-      max-height: 0;
-      opacity: 0;
-      transform: translateY(-10px);
-    }
-    to {
-      max-height: 800px;
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-`;
+// Note: Custom animations like 'chasingLight', 'expandGlow', and 'smoothAccordionExpand' 
+// may require custom Tailwind configuration for full replication. Below, Tailwind's built-in 
+// utilities are used for similar effects where possible.
 
 const PaymentModal = ({ isOpen, onClose, tier, paymentConfig, submissionId }: {
   isOpen: boolean;
   onClose: () => void;
   tier: Tier | null;
-  paymentConfig: any;
+  paymentConfig: { paypalClientId: string };
   submissionId: string | null;
 }) => {
   if (!isOpen || !tier || !paymentConfig || !submissionId) return null;
 
-  const createOrder = (data: any, actions: any) => {
+  const createOrder = useCallback((data: Record<string, unknown>, actions: CreateOrderActions): Promise<string> => {
     return actions.order.create({
       purchase_units: [{
         description: `StayOnBeat Submission - ${tier.name}`,
         amount: { currency_code: "USD", value: (tier.price / 100).toFixed(2) },
       }],
     });
-  };
+  }, [tier]);
 
-  const onApprove = (data: any, actions: any) => {
-    return actions.order.capture().then(async (details: any) => {
-      // In a real app, you would securely update the submission status on the backend
-      console.log('Payment successful:', { submissionId, paypalOrderId: details.id });
-      alert('Transaction completed by ' + details.payer.name.given_name);
-      onClose();
+  const onApprove = useCallback((data: OnApproveData, actions: any): Promise<void> => {
+    if (!actions.order) {
+      return Promise.reject(new Error("PayPal actions.order is undefined."));
+    }
+    return actions.order.capture().then(async (details: { id: string; payer: { name?: { given_name?: string } } }) => {
+      // --- SECURITY IMPROVEMENT ---
+      // The client must call the backend to securely verify and record the payment.
+      try {
+        const response = await fetch('/api/submissions/update-payment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            submissionId: submissionId,
+            paypalOrderId: details.id,
+          }),
+        });
+
+        if (!response.ok) {
+          // Handle server-side verification failure
+          const errorData = await response.json();
+          alert(`Payment verification failed: ${errorData.message || 'Please contact support.'}`);
+          // Do not close the modal or reset the form on failure
+          return;
+        }
+
+        // Server has confirmed the payment. Now we can proceed.
+        console.log("Payment successful and verified by server:", { submissionId, paypalOrderId: details.id });
+        if (details.payer.name?.given_name) {
+          alert(`Transaction completed by ${details.payer.name.given_name}`);
+        }
+        onClose(); // Close modal and reset form only on success
+      } catch (error) {
+        console.error("Error verifying payment:", error);
+        alert("An error occurred while verifying your payment. Please contact support.");
+      }
     });
-  };
+  }, [submissionId, onClose]);
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-80 backdrop-blur-sm flex items-center justify-center z-50">
-      <div className="payment-modal-container">
-        <div className="payment-modal-header">
-          <h2 className="text-2xl font-bold text-white glass-etched-text">Complete Submission</h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-white transition-colors">&times;</button>
+      <div className="bg-gray-800 rounded-lg p-6 w-full max-w-md">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-2xl font-bold text-white font-mono tracking-wider uppercase">Complete Submission</h2>
+          <button onClick={onClose} className="text-gray-500 hover:text-white transition-colors duration-300 text-3xl">&times;</button>
         </div>
-        <div className="payment-modal-body">
-          <div className="payment-modal-tier-info">
+        <div className="space-y-6">
+          <div className="text-center">
             <p className="text-gray-300">You've selected <span className="font-bold text-cyan-400">{tier.name}</span>.</p>
             <p className="text-4xl font-bold text-white font-mono my-2">${(tier.price / 100).toFixed(2)}</p>
           </div>
-          <div className="payment-modal-actions">
+          <div className="flex justify-center">
             {paymentConfig.paypalClientId && (
               <PayPalScriptProvider options={{ clientId: paymentConfig.paypalClientId }}>
                 <PayPalButtons style={{ layout: "vertical" }} createOrder={createOrder} onApprove={onApprove} />
@@ -216,18 +155,18 @@ const tierData = [
 
 // Icon component
 const ModernTierIcon = ({ icon, iconType }: { icon: string; iconType: string }) => {
-  const baseStyles = "flex items-center justify-center text-cyan-400 font-bold transition-all duration-300";
+  const baseStyles = "flex items-center justify-center text-cyan-400 font-bold transition-all duration-300 ease-in-out";
 
   switch (iconType) {
     case 'text':
       return (
-        <div className={`${baseStyles} text-sm tracking-wider font-mono bg-cyan-400/10 rounded px-2 py-1 border border-cyan-400/30`}>
+        <div className={`${baseStyles} text-sm tracking-wider font-mono bg-cyan-400/10 rounded-md px-2 py-1 border border-cyan-400/30`}>
           {icon}
         </div>
       );
     case 'clock':
       return (
-        <div className={`${baseStyles} text-xs font-mono bg-red-400/10 rounded px-2 py-1 border border-red-400/30 text-red-400`}>
+        <div className={`${baseStyles} text-xs font-mono bg-red-400/10 rounded-md px-2 py-1 border border-red-400/30 text-red-400`}>
           {icon}
         </div>
       );
@@ -300,42 +239,36 @@ export function TierAccordionCards({ className = '' }: TierAccordionCardsProps) 
 
   // --- Loading and Authentication Gates ---
   if (!isLoaded || isLoading) {
-    return (
-      <div className="text-center py-12 flex items-center justify-center space-x-3">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-400"></div>
-        <span className="text-cyan-400">Loading Submission Form...</span>
-      </div>
-    );
+  return (
+    <div className="text-center py-12 flex items-center justify-center space-x-3">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-400"></div>
+      <span className="text-cyan-400">Loading Submission Form...</span>
+    </div>
+  );
   }
 
   if (!isSignedIn) {
-    return (
-      <div className="text-center py-12 space-y-6">
-        <p className="text-yellow-400 text-lg">Please sign in to submit a track.</p>
-        <SignInButton mode="modal">
-          <button className="px-6 py-3 bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-bold rounded-lg shadow-lg hover:scale-105 transition-transform">
-            Sign In
-          </button>
-        </SignInButton>
-      </div>
-    );
+  return (
+    <div className="text-center py-12 space-y-6">
+      <p className="text-yellow-400 text-lg">Please sign in to submit a track.</p>
+      <SignInButton mode="modal">
+        <button className="px-6 py-3 bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-bold rounded-lg shadow-lg hover:scale-105 transition-transform duration-300 ease-in-out">
+          Sign In
+        </button>
+      </SignInButton>
+    </div>
+  );
   }
 
   return (
     <div ref={container} className={`w-full max-w-2xl mx-auto px-4 ${className} relative`}>
-      <style>{animationStyles}</style>
+      {/* Removed <style> tag, using Tailwind CSS classes instead */}
       <form onSubmit={form.handleSubmit} className="space-y-8">
         {/* Track URL Input Card */}
-        <div
-          className="backdrop-blur-sm rounded-xl border-2 overflow-hidden card-hover-effect"
-          style={{
-            background: 'linear-gradient(135deg, rgba(147, 51, 234, 0.4) 0%, rgba(6, 182, 212, 0.4) 50%, rgba(147, 51, 234, 0.4) 100%)',
-            borderColor: 'rgba(147, 51, 234, 0.8)',
-            boxShadow: '0 0 20px rgba(147, 51, 234, 0.3), inset 0 0 20px rgba(255, 255, 255, 0.1)'
-          }}
-        >
+          <div className="backdrop-blur-sm rounded-xl border-2 border-purple-400/80 overflow-hidden relative bg-gradient-to-r from-purple-900/40 to-cyan-900/40 shadow-lg shadow-purple-400/30 transition-all duration-300 ease-in-out group">
+            {/* Note: 'card-hover-effect' replaced with Tailwind's 'group' and 'transition-all'. Custom pseudo-element animation may need custom Tailwind config. */}
           <div className="p-6">
-            <h4 className="text-lg text-white mb-3 text-center glass-etched-text">
+            <h4 className="text-lg text-white mb-3 text-center font-mono tracking-wider uppercase text-shadow-lg">
               🎵 SUBMIT YOUR TRACK
             </h4>
             <input
@@ -363,14 +296,14 @@ export function TierAccordionCards({ className = '' }: TierAccordionCardsProps) 
                   <h6 className="font-semibold text-white text-lg">{form.trackPreview.title}</h6>
                   <p className="text-sm text-gray-400 font-medium">{form.trackPreview.artist}</p>
                   <div className="flex items-center space-x-3 mt-1">
-                    <span className="text-xs text-cyan-400 bg-cyan-400/10 px-2 py-1 rounded">{form.trackPreview.duration}</span>
-                    <span className="text-xs text-purple-400 bg-purple-400/10 px-2 py-1 rounded">{form.trackPreview.platform}</span>
+                    <span className="text-xs text-cyan-400 bg-cyan-400/10 px-2 py-1 rounded-md">{form.trackPreview.duration}</span>
+                    <span className="text-xs text-purple-400 bg-purple-400/10 px-2 py-1 rounded-md">{form.trackPreview.platform}</span>
                   </div>
                 </div>
               </div>
 
               {!form.isTrackConfirmed ? (
-                <button type="button" onClick={form.handleTrackConfirm} className="w-full py-3 px-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold rounded-lg transition-all duration-200 transform hover:scale-[1.02]">
+                <button type="button" onClick={form.handleTrackConfirm} className="w-full py-3 px-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold rounded-lg transition-all duration-300 ease-in-out transform hover:scale-[1.02]">
                   ✓ Confirm This Track
                 </button>
               ) : (
@@ -386,8 +319,8 @@ export function TierAccordionCards({ className = '' }: TierAccordionCardsProps) 
         </div>
 
         {/* Tier Selection Container */}
-        <div className="bg-gradient-to-r from-purple-900/20 via-cyan-900/20 to-purple-900/20 backdrop-blur-sm rounded-2xl border border-purple-400/30 p-6 card-hover-effect">
-          <h3 className="text-xl font-bold text-center mb-6 glass-etched-text">
+        <div className="bg-gradient-to-r from-purple-900/20 via-cyan-900/20 to-purple-900/20 backdrop-blur-sm rounded-2xl border border-purple-400/30 p-6 card-hover-effect shadow-lg shadow-purple-400/30">
+          <h3 className="text-xl font-bold text-center mb-6 font-mono tracking-wider uppercase text-shadow-lg">
             🎯 SELECT YOUR TIER
           </h3>
           
@@ -395,10 +328,11 @@ export function TierAccordionCards({ className = '' }: TierAccordionCardsProps) 
             {tierData.map((tier) => (
               <div
                 key={tier.id}
-                className={`tier-card-enhanced bg-gradient-to-r from-cyan-900/40 via-purple-900/40 to-cyan-900/40 backdrop-blur-sm rounded-xl border ${
-                  form.selectedTier === tier.id ? 'border-cyan-400 shadow-lg shadow-cyan-400/20 expand-glow' : 'border-cyan-400/80 hover:border-cyan-300'
-                }`}
+                className={`tier-card-enhanced bg-gradient-to-r from-purple-900/40 via-cyan-900/40 to-purple-900/40 backdrop-blur-sm rounded-xl border ${
+                  form.selectedTier === tier.id ? 'border-cyan-400 shadow-lg shadow-cyan-400/20' : 'border-cyan-400/80 hover:border-cyan-300 hover:shadow-xl hover:shadow-cyan-400/30'
+                } transition-all duration-300 ease-in-out relative overflow-hidden`}
               >
+                {/* Note: 'expand-glow' animation replaced with Tailwind's shadow utilities. For full animation effect, consider custom Tailwind animation config. */}
                 <button
                   type="button"
                   onClick={() => form.handleTierSelect(tier.id)}
@@ -409,8 +343,8 @@ export function TierAccordionCards({ className = '' }: TierAccordionCardsProps) 
                       <ModernTierIcon icon={tier.icon} iconType={tier.iconType} />
                     </div>
                     <div className="flex-1 text-center px-4">
-                      <h4 className="glass-etched-text">{tier.name}</h4>
-                      <p className="text-xs text-gray-500 mt-1">{tier.description}</p>
+                      <h4 className="font-mono tracking-wider uppercase text-white text-shadow-lg">{tier.name}</h4>
+                      <p className="text-xs text-gray-400 mt-1">{tier.description}</p>
                     </div>
                     <div className="w-20 flex justify-center">
                       <span className="text-lg font-bold text-cyan-400 font-mono">
@@ -420,59 +354,52 @@ export function TierAccordionCards({ className = '' }: TierAccordionCardsProps) 
                   </div>
                 </button>
                 {form.expandedTier === tier.id && (
-                <div className="px-6 pb-6 border-t border-gray-700/50 smooth-accordion-expand">
-                  <div className="pt-4 space-y-4">
-                    {/* Features List */}
-                    <div className="space-y-2">
-                      {tier.features.map((feature, index) => (
-                        <div key={index} className="flex items-center text-sm text-gray-300">
-                          <span className="text-cyan-400 mr-2">•</span>
-                          {feature}
-                        </div>
-                      ))}
-                    </div>
+                  <div className="px-6 pb-6 border-t border-gray-700/50 overflow-hidden transition-all duration-[600ms] ease-[cubic-bezier(0.25,0.46,0.45,0.94)] max-h-[800px] opacity-100 translate-y-0">
+                    {/* Note: 'smooth-accordion-expand' animation approximated with Tailwind's transition utilities. Full effect may require custom animation in Tailwind config. */}
+                    <div className="pt-4 space-y-4">
+                      {/* Features List */}
+                      <div className="space-y-2">
+                        {tier.features.map((feature, index) => (
+                          <div key={index} className="flex items-center text-sm text-gray-300">
+                            <span className="text-cyan-400 mr-2">•</span>
+                            {feature}
+                          </div>
+                        ))}
+                      </div>
 
-                    {/* Message Input */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-2">
-                        Message for DJ (Optional)
-                      </label>
-                      <textarea
-                        value={form.submissionMessage}
-                        onChange={(e) => form.setSubmissionMessage(e.target.value)}
-                        placeholder="Any special requests or notes for the DJ?"
-                        className="w-full p-3 rounded-lg bg-gray-900/70 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent text-white placeholder-gray-400 h-20 resize-none"
-                      />
-                    </div>
+                      {/* Message Input */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                          Message for DJ (Optional)
+                        </label>
+                        <textarea
+                          value={form.submissionMessage}
+                          onChange={(e) => form.setSubmissionMessage(e.target.value)}
+                          placeholder="Any special requests or notes for the DJ?"
+                          className="w-full p-3 rounded-lg bg-gray-900/70 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent text-white placeholder-gray-400 h-20 resize-none"
+                        />
+                      </div>
 
-                    {/* Submit Button */}
-                    <button
-                      type="submit"
-                      disabled={!form.isTrackConfirmed || form.isSubmitting}
-                      className="w-full py-3 px-6 rounded-lg text-white transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                      style={{
-                        background: tier.price > 0
-                          ? 'linear-gradient(135deg, #8b5cf6 0%, #06b6d4 100%)'
-                          : 'linear-gradient(135deg, #059669 0%, #06b6d4 100%)',
-                        boxShadow: '0 4px 15px rgba(0, 255, 255, 0.3)',
-                        fontFamily: "'Orbitron', 'Exo 2', 'Rajdhani', 'Russo One', monospace",
-                        fontWeight: 700,
-                        letterSpacing: '0.08em',
-                        textTransform: 'uppercase',
-                      }}
-                    >
-                      {form.isSubmitting ? (
-                        <>
-                          <div className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                          Submitting...
-                        </>
-                      ) : (
-                        'SUBMIT'
-                      )}
-                    </button>
+                      {/* Submit Button */}
+                      <button
+                        type="submit"
+                        disabled={!form.isTrackConfirmed || form.isSubmitting}
+                        className={`w-full py-3 px-6 rounded-lg text-white transition-all duration-300 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed ${
+                          tier.price > 0 ? 'bg-gradient-to-r from-purple-500 to-cyan-500' : 'bg-gradient-to-r from-green-600 to-cyan-500'
+                        } shadow-lg shadow-cyan-400/30 font-mono tracking-wider uppercase font-bold`}
+                      >
+                        {form.isSubmitting ? (
+                          <>
+                            <div className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                            Submitting...
+                          </>
+                        ) : (
+                          "SUBMIT"
+                        )}
+                      </button>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
               </div>
             ))}
           </div>
