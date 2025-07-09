@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "@clerk/clerk-sdk-node": "^5.1.6",
-    "@clerk/nextjs": "^6.23.2",
+    "@clerk/nextjs": "^6.24.0",
     "@gsap/react": "^2.1.2",
     "@hello-pangea/dnd": "^18.0.1",
     "gsap": "^3.13.0",
