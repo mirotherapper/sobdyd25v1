@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import clientPromise from '../../../../lib/mongodb';
-import Artist from '../../../../lib/models/Artist';
+import dbConnect from '../../../lib/dbConnect';
+import Artist from '../../../lib/db/models/Artist';
 import { auth } from '@clerk/nextjs/server';
 
 // This is a simplified example. In a real application, you would:
@@ -12,20 +12,26 @@ export async function POST(request: Request) {
   const { userId } = await auth();
 
   if (!userId) {
-    return new NextResponse("Unauthorized", { status: 401 });
+    return new NextResponse('Unauthorized', { status: 401 });
   }
 
   try {
-    await clientPromise;
+    await dbConnect();
     const { clerkUserId } = await request.json();
 
     if (!clerkUserId) {
-      return NextResponse.json({ message: 'Clerk User ID is required' }, { status: 400 });
+      return NextResponse.json(
+        { message: 'Clerk User ID is required' },
+        { status: 400 }
+      );
     }
 
     // Ensure the requesting user is the one whose profile is being synced
     if (userId !== clerkUserId) {
-      return new NextResponse("Forbidden: You can only sync your own artist profile", { status: 403 });
+      return new NextResponse(
+        'Forbidden: You can only sync your own artist profile',
+        { status: 403 }
+      );
     }
 
     // Simulate fetching data from music platforms using Clerk's connected accounts
@@ -51,15 +57,23 @@ export async function POST(request: Request) {
     };
 
     // Find or create the artist profile
-    let artist = await Artist.findOneAndUpdate(
+    const artist = await Artist.findOneAndUpdate(
       { clerkUserId },
       { $set: simulatedArtistData },
       { upsert: true, new: true }
     );
 
-    return NextResponse.json({ message: 'Artist profile synced successfully', artist }, { status: 200 });
-  } catch (error: any) {
+    return NextResponse.json(
+      { message: 'Artist profile synced successfully', artist },
+      { status: 200 }
+    );
+  } catch (error: unknown) {
     console.error('Error syncing artist profile:', error);
-    return NextResponse.json({ message: 'Error syncing artist profile', error: error.message }, { status: 500 });
+    const errorMessage =
+      error instanceof Error ? error.message : 'An unknown error occurred';
+    return NextResponse.json(
+      { message: 'Error syncing artist profile', error: errorMessage },
+      { status: 500 }
+    );
   }
 }

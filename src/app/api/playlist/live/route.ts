@@ -1,15 +1,14 @@
 import { NextResponse } from 'next/server';
-import { connectToDatabase } from '../../../../../lib/mongodb';
-import { PlaylistData } from '../../../../../lib/types';
+import clientPromise from '../../../../../lib/mongodb';
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
-    const { db } = await connectToDatabase();
+    const db = (await clientPromise).db();
 
     // Find or create the live playlist
-    let livePlaylist = await db.collection('playlists').findOne(
-      { name: 'Live Show' }
-    );
+    let livePlaylist = await db
+      .collection('playlists')
+      .findOne({ name: 'Live Show' });
 
     if (!livePlaylist) {
       // Create live playlist if it doesn't exist
@@ -18,9 +17,11 @@ export async function GET(request: Request) {
         items: [],
         is_show_archive: false,
         is_locked: false,
-        created_at: new Date()
+        created_at: new Date(),
       });
-      livePlaylist = await db.collection('playlists').findOne({ _id: result.insertedId });
+      livePlaylist = await db
+        .collection('playlists')
+        .findOne({ _id: result.insertedId });
     }
 
     // Populate song data for playlist items
@@ -39,15 +40,18 @@ export async function GET(request: Request) {
               platform: song.platform,
               artwork: song.artwork,
               duration: song.duration,
-              is_video: song.is_video
-            }
+              is_video: song.is_video,
+            },
           });
         }
       }
     }
 
     if (!livePlaylist) {
-      return NextResponse.json({ message: 'Failed to create or find live playlist' }, { status: 500 });
+      return NextResponse.json(
+        { message: 'Failed to create or find live playlist' },
+        { status: 500 }
+      );
     }
 
     const response = {
@@ -56,12 +60,15 @@ export async function GET(request: Request) {
       items: populatedItems,
       is_show_archive: livePlaylist.is_show_archive,
       is_locked: livePlaylist.is_locked,
-      created_at: livePlaylist.created_at
+      created_at: livePlaylist.created_at,
     };
 
     return NextResponse.json(response, { status: 200 });
   } catch (error) {
     console.error('Error fetching live playlist:', error);
-    return NextResponse.json({ message: 'Error fetching live playlist', error }, { status: 500 });
+    return NextResponse.json(
+      { message: 'Error fetching live playlist', error },
+      { status: 500 }
+    );
   }
 }

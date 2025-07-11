@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+
 
 // From lib/url-utils.ts
 export interface ExtractedMetadata {
@@ -93,7 +93,7 @@ export interface HostSubscriptionData {
   endDate?: string;
   isActive: boolean;
   paymentMethod: string;
-  paymentDetails: Record<string, any>; // Store relevant payment gateway details
+  paymentDetails: Record<string, unknown>; // Store relevant payment gateway details
   clerkUserId: string; // Link to Clerk user ID
 }
 

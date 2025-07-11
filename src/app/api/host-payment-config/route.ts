@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import clientPromise from '../../../../lib/mongodb';
-import Host from '../../../../lib/models/Host';
+import Host from '../../../lib/db/models/Host';
 
 export async function GET(request: Request) {
   try {
@@ -9,7 +9,10 @@ export async function GET(request: Request) {
     const hostId = searchParams.get('hostId');
 
     if (!hostId) {
-      return NextResponse.json({ message: 'Host ID is required' }, { status: 400 });
+      return NextResponse.json(
+        { message: 'Host ID is required' },
+        { status: 400 }
+      );
     }
 
     const host = await Host.findById(hostId);
@@ -20,13 +23,20 @@ export async function GET(request: Request) {
 
     // Return only the public-facing configured payment gateways for the host
     const config = {
-      paypal: host.configuredPaymentGateways?.paypal ? { clientId: host.configuredPaymentGateways.paypal.clientId } : undefined,
+      paypal: host.configuredPaymentGateways?.paypal
+        ? { clientId: host.configuredPaymentGateways.paypal.clientId }
+        : undefined,
       customLink: host.configuredPaymentGateways?.customLink || undefined,
     };
 
     return NextResponse.json(config, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error fetching host payment config:', error);
-    return NextResponse.json({ message: 'Error fetching host payment config', error: error.message }, { status: 500 });
+    const errorMessage =
+      error instanceof Error ? error.message : 'An unknown error occurred';
+    return NextResponse.json(
+      { message: 'Error fetching host payment config', error: errorMessage },
+      { status: 500 }
+    );
   }
 }

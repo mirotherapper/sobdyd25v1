@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { detectPlatform, extractMetadata } from '../../../lib/url-utils';
 
-interface TrackPreview {
+interface TraxPreview {
   platform: string;
   title: string;
   artist: string;
@@ -10,7 +10,7 @@ interface TrackPreview {
   url: string;
 }
 
-export interface Tier {
+export interface QueUp {
   id: string;
   name: string;
   price: number;
@@ -25,36 +25,34 @@ export interface Message {
 
 interface UseSubmissionFormProps {
   userId: string | null | undefined;
-  isSignedIn: boolean | undefined;
-  paymentConfig: any;
-  tierData: Tier[];
+  paymentConfig: unknown;
+  queUpData: QueUp[];
   setMessage: (message: Message | null) => void;
   onSuccess: () => void;
 }
 
 export const useSubmissionForm = ({
   userId,
-  isSignedIn,
   paymentConfig,
-  tierData,
+  queUpData,
   setMessage,
   onSuccess,
 }: UseSubmissionFormProps) => {
   const [url, setUrl] = useState('');
   const [submissionMessage, setSubmissionMessage] = useState('');
   const [startTime, setStartTime] = useState('');
-  const [trackPreview, setTrackPreview] = useState<TrackPreview | null>(null);
-  const [isTrackConfirmed, setIsTrackConfirmed] = useState(false);
+  const [traxPreview, setTraxPreview] = useState<TraxPreview | null>(null);
+  const [isTraxConfirmed, setIsTraxConfirmed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedTier, setSelectedTier] = useState<string>('');
-  const [expandedTier, setExpandedTier] = useState<string | null>(null);
+  const [selectedQueUp, setSelectedQueUp] = useState<string>('');
+  const [expandedQueUp, setExpandedQueUp] = useState<string | null>(null);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
-  const [tierForPayment, setTierForPayment] = useState<Tier | null>(null);
+  const [queUpForPayment, setQueUpForPayment] = useState<QueUp | null>(null);
 
   const handleUrlChange = async (newUrl: string) => {
     setUrl(newUrl);
-    setIsTrackConfirmed(false);
-    setTrackPreview(null);
+    setIsTraxConfirmed(false);
+    setTraxPreview(null);
     setMessage(null);
 
     if (newUrl.trim()) {
@@ -62,34 +60,40 @@ export const useSubmissionForm = ({
         const platform = detectPlatform(newUrl);
         const metadata = extractMetadata(newUrl, platform);
 
-        setTrackPreview({
+        setTraxPreview({
           platform,
-          title: metadata.title || 'Track Title',
+          title: metadata.title || 'Trax Title',
           artist: metadata.artist || 'Artist Name',
           duration: metadata.duration ? metadata.duration.toString() : '3:45',
           thumbnail: metadata.artwork || '/default-album-art.jpg',
           url: newUrl,
         });
-      } catch (error) {
-        console.error("Error processing URL:", error);
-        setMessage({ text: "Could not process the provided URL. Please check if it's a valid link.", type: 'error' });
+      } catch {
+        console.error('Error processing URL:');
+        setMessage({
+          text: "Could not process the provided URL. Please check if it's a valid link.",
+          type: 'error',
+        });
       }
     }
   };
 
-  const handleTrackConfirm = () => {
-    setIsTrackConfirmed(true);
-    setMessage({ text: 'Track confirmed! Now select your submission tier.', type: 'info' });
+  const handleTraxConfirm = () => {
+    setIsTraxConfirmed(true);
+    setMessage({
+      text: 'Trax confirmed! Now select your submission Que-Up.',
+      type: 'info',
+    });
   };
 
-  const handleTierSelect = (tierId: string) => {
-    const wasExpanded = expandedTier === tierId;
-    setSelectedTier(tierId);
+  const handleQueUpSelect = (queUpId: string) => {
+    const wasExpanded = expandedQueUp === queUpId;
+    setSelectedQueUp(queUpId);
 
     if (wasExpanded) {
-      setExpandedTier(null);
+      setExpandedQueUp(null);
     } else {
-      setExpandedTier(tierId);
+      setExpandedQueUp(queUpId);
     }
   };
 
@@ -97,21 +101,24 @@ export const useSubmissionForm = ({
     setUrl('');
     setSubmissionMessage('');
     setStartTime('');
-    setSelectedTier('');
-    setExpandedTier(null);
-    setTrackPreview(null);
-    setIsTrackConfirmed(false);
+    setSelectedQueUp('');
+    setExpandedQueUp(null);
+    setTraxPreview(null);
+    setIsTraxConfirmed(false);
   };
-  
+
   const handleClosePaymentModal = () => {
     setIsPaymentModalOpen(false);
-    setTierForPayment(null);
+    setQueUpForPayment(null);
     // The success message is already shown, so we just reset.
-    setMessage({ text: "Your submission is in the queue. You can submit another track.", type: 'info' });
+    setMessage({
+      text: 'Your submission is in the queue. You can submit another trax.',
+      type: 'info',
+    });
     resetForm();
   };
 
-  const submitTrack = async (data: any, isPaid: boolean) => {
+  const submitTrax = async (data: object, isPaid: boolean) => {
     try {
       const response = await fetch('/api/submissions', {
         method: 'POST',
@@ -122,27 +129,42 @@ export const useSubmissionForm = ({
       let result;
       try {
         result = await response.json();
-      } catch (jsonError) {
-        setMessage({ text: `Submission failed: Server returned an invalid response (Status: ${response.status})`, type: 'error' });
+      } catch {
+        setMessage({
+          text: `Submission failed: Server returned an invalid response (Status: ${response.status})`,
+          type: 'error',
+        });
         return;
       }
 
       if (response.ok) {
         if (isPaid) {
-          setMessage({ text: 'Submission recorded! Please complete payment.', type: 'success' });
+          setMessage({
+            text: 'Submission recorded! Please complete payment.',
+            type: 'success',
+          });
           onSuccess();
         } else {
-          setMessage({ text: 'Submission successful! Your track is in the queue.', type: 'success' });
+          setMessage({
+            text: 'Submission successful! Your trax is in the queue.',
+            type: 'success',
+          });
           resetForm();
           onSuccess();
         }
       } else {
         const errorMessage = result?.error || 'An unknown error occurred.';
-        setMessage({ text: `Submission failed: ${errorMessage}`, type: 'error' });
+        setMessage({
+          text: `Submission failed: ${errorMessage}`,
+          type: 'error',
+        });
       }
-    } catch (error: any) {
-      console.error("Submission network error:", error);
-      setMessage({ text: 'A network error occurred. Please check your connection and try again.', type: 'error' });
+    } catch (error: unknown) {
+      console.error('Submission network error:', error);
+      setMessage({
+        text: 'A network error occurred. Please check your connection and try again.',
+        type: 'error',
+      });
     }
   };
 
@@ -151,23 +173,26 @@ export const useSubmissionForm = ({
 
     /* Temporarily disabled for testing
     if (!isSignedIn) {
-      setMessage('Please sign in to submit a track.');
+      setMessage('Please sign in to submit a trax.');
       return;
     }
     */
 
     if (!url.trim()) {
-      setMessage({ text: 'Please enter a track URL.', type: 'error' });
+      setMessage({ text: 'Please enter a trax URL.', type: 'error' });
       return;
     }
 
-    if (!isTrackConfirmed) {
-      setMessage({ text: 'Please confirm the track preview first.', type: 'error' });
+    if (!isTraxConfirmed) {
+      setMessage({
+        text: 'Please confirm the trax preview first.',
+        type: 'error',
+      });
       return;
     }
 
-    if (!selectedTier) {
-      setMessage({ text: 'Please select a submission tier.', type: 'error' });
+    if (!selectedQueUp) {
+      setMessage({ text: 'Please select a submission Que-Up.', type: 'error' });
       return;
     }
 
@@ -177,15 +202,19 @@ export const useSubmissionForm = ({
     try {
       const platform = detectPlatform(url);
       const metadata = extractMetadata(url, platform);
-      const selectedTierObject = tierData.find(t => t.id === selectedTier);
-      if (!selectedTierObject) {
-        setMessage({ text: 'Could not find selected tier details.', type: 'error' });
+      const selectedQueUpObject = queUpData.find(q => q.id === selectedQueUp);
+      if (!selectedQueUpObject) {
+        setMessage({
+          text: 'Could not find selected Que-Up details.',
+          type: 'error',
+        });
         return;
       }
 
       const dataToSend = {
         url,
-        submissionType: tierData.find(t => t.id === selectedTier)?.name || 'Free',
+        submissionType:
+          queUpData.find(q => q.id === selectedQueUp)?.name || 'Free',
         submissionMessage,
         startTime,
         platform,
@@ -193,22 +222,31 @@ export const useSubmissionForm = ({
         submittedBy: userId,
       };
 
-      const tierPrice = selectedTierObject.price || 0;
+      const queUpPrice = selectedQueUpObject.price || 0;
 
-      if (tierPrice > 0) {
-        if (paymentConfig?.paypal || paymentConfig?.customLink) {
-          await submitTrack(dataToSend, true);
-          setTierForPayment(selectedTierObject);
+      if (queUpPrice > 0) {
+        if (
+          (paymentConfig as any)?.paypal ||
+          (paymentConfig as any)?.customLink
+        ) {
+          await submitTrax(dataToSend, true);
+          setQueUpForPayment(selectedQueUpObject);
           setIsPaymentModalOpen(true);
         } else {
-          setMessage({ text: 'No payment method configured for this host for paid tiers.', type: 'error' });
+          setMessage({
+            text: 'No payment method configured for this host for paid Que-Ups.',
+            type: 'error',
+          });
         }
       } else {
-        await submitTrack(dataToSend, false);
+        await submitTrax(dataToSend, false);
       }
     } catch (error) {
-      console.error("Error during submission preparation:", error);
-      setMessage({ text: 'An unexpected error occurred while preparing your submission. Please try again.', type: 'error' });
+      console.error('Error during submission preparation:', error);
+      setMessage({
+        text: 'An unexpected error occurred while preparing your submission. Please try again.',
+        type: 'error',
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -221,17 +259,17 @@ export const useSubmissionForm = ({
     setSubmissionMessage,
     startTime,
     setStartTime,
-    trackPreview,
-    isTrackConfirmed,
+    traxPreview,
+    isTraxConfirmed,
     isSubmitting,
-    selectedTier,
-    expandedTier,
+    selectedQueUp,
+    expandedQueUp,
     handleUrlChange,
-    handleTrackConfirm,
-    handleTierSelect,
+    handleTraxConfirm,
+    handleQueUpSelect,
     handleSubmit,
     isPaymentModalOpen,
-    tierForPayment,
+    queUpForPayment,
     handleClosePaymentModal,
   };
 };

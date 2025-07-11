@@ -1,35 +1,33 @@
-import { MongoClient, Db } from 'mongodb';
+import { MongoClient, ServerApiVersion } from 'mongodb';
 
-const MONGODB_URI = process.env.MONGODB_URI;
-const MONGODB_DB = process.env.MONGODB_DB;
+const uri = process.env.MONGODB_URI;
 
-if (!MONGODB_URI) {
+if (!uri) {
   throw new Error('Please define the MONGODB_URI environment variable inside .env.local');
 }
 
-if (!MONGODB_DB) {
-  throw new Error('Please define the MONGODB_DB environment variable inside .env.local');
-}
+const options = {
+  serverApi: {
+    version: ServerApiVersion.v1,
+    strict: true,
+    deprecationErrors: true,
+  },
+};
 
-/**
- * Global is used here to maintain a cached connection across hot reloads
- * in development. This prevents connections from growing exponentially
- * during API Route usage.
- */
-let cachedClient: MongoClient | null = null;
-let cachedDb: Db | null = null;
+let client: MongoClient;
+let clientPromise: Promise<MongoClient>;
 
-export async function connectToDatabase() {
-  if (cachedClient && cachedDb) {
-    return { client: cachedClient, db: cachedDb };
+if (process.env.NODE_ENV === 'development') {
+  // In development mode, use a global variable to preserve the client across hot reloads
+  if (!(global as typeof globalThis & { _mongoClientPromise?: Promise<MongoClient> })._mongoClientPromise) {
+    client = new MongoClient(uri, options);
+    (global as typeof globalThis & { _mongoClientPromise?: Promise<MongoClient> })._mongoClientPromise = client.connect();
   }
-
-  const client = new MongoClient(MONGODB_URI!);
-  await client.connect();
-  const db = client.db(MONGODB_DB);
-
-  cachedClient = client;
-  cachedDb = db;
-
-  return { client, db };
+  clientPromise = (global as typeof globalThis & { _mongoClientPromise?: Promise<MongoClient> })._mongoClientPromise!;
+} else {
+  // In production mode, it's best to not use a global variable
+  client = new MongoClient(uri, options);
+  clientPromise = client.connect();
 }
+
+export default clientPromise;

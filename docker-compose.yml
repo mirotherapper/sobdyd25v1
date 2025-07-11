@@ -3,7 +3,7 @@ version: '3.8'
 services:
   app:
     # The name for the running container
-    container_name: stayonbeat_app
+    container_name: traxplaya_app
 
     # Tells Docker Compose to build the image from the Dockerfile in the current directory
     build:
@@ -12,7 +12,7 @@ services:
 
     # Maps port 3000 on the host to port 3000 in the container
     ports:
-      - "3000:3000"
+      - '3000:3000'
 
     # Loads environment variables from the specified file into the container
     env_file:
@@ -27,13 +27,13 @@ services:
 
   db:
     image: mongo:latest
-    container_name: stayonbeat_db
+    container_name: traxplaya_db
     restart: unless-stopped
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
     ports:
-      - "27017:27017"
+      - '27017:27017'
     volumes:
       - mongo-data:/data/db
 

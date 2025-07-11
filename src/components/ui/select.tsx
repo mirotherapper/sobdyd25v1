@@ -27,19 +27,18 @@ interface SelectItemProps {
   value: string;
 }
 
-export function Select({ className = '', children, value, onValueChange }: SelectProps) {
-  return (
-    <div className={`relative ${className}`}>
-      {children}
-    </div>
-  );
+export function Select({ className = '', children }: SelectProps) {
+  return <div className={`relative ${className}`}>{children}</div>;
 }
 
-export function SelectTrigger({ className = '', children }: SelectTriggerProps) {
+export function SelectTrigger({
+  className = '',
+  children,
+}: SelectTriggerProps) {
   return (
     <button
       type="button"
-      className={`w-full px-3 py-2 border border-gray-300 rounded-md bg-white text-left focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${className}`}
+      className={`w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-left focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none ${className}`}
     >
       {children}
     </button>
@@ -47,25 +46,30 @@ export function SelectTrigger({ className = '', children }: SelectTriggerProps) 
 }
 
 export function SelectValue({ placeholder }: SelectValueProps) {
-  return (
-    <span className="text-gray-500">
-      {placeholder}
-    </span>
-  );
+  return <span className="text-gray-500">{placeholder}</span>;
 }
 
-export function SelectContent({ className = '', children }: SelectContentProps) {
+export function SelectContent({
+  className = '',
+  children,
+}: SelectContentProps) {
   return (
-    <div className={`absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg ${className}`}>
+    <div
+      className={`absolute z-50 mt-1 w-full rounded-md border border-gray-300 bg-white shadow-lg ${className}`}
+    >
       {children}
     </div>
   );
 }
 
-export function SelectItem({ className = '', children, value }: SelectItemProps) {
+export function SelectItem({
+  className = '',
+  children,
+  value,
+}: SelectItemProps) {
   return (
     <div
-      className={`px-3 py-2 hover:bg-gray-100 cursor-pointer ${className}`}
+      className={`cursor-pointer px-3 py-2 hover:bg-gray-100 ${className}`}
       data-value={value}
     >
       {children}

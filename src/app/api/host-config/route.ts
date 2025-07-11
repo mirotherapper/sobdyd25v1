@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import clientPromise from '../../../../lib/mongodb';
-import Host from '../../../../lib/models/Host';
+import Host from '../../../lib/db/models/Host';
 
 export async function GET(request: Request) {
   try {
@@ -9,7 +9,10 @@ export async function GET(request: Request) {
     const hostId = searchParams.get('hostId');
 
     if (!hostId) {
-      return NextResponse.json({ message: 'Host ID is required' }, { status: 400 });
+      return NextResponse.json(
+        { message: 'Host ID is required' },
+        { status: 400 }
+      );
     }
 
     const host = await Host.findById(hostId);
@@ -20,13 +23,19 @@ export async function GET(request: Request) {
 
     // Return only the necessary public configuration, e.g., Stripe publishable key
     const config = {
-      stripePublishableKey: host.configuredPaymentGateways?.stripe?.publishableKey || null,
+      stripePublishableKey:
+        host.configuredPaymentGateways?.stripe?.publishableKey || null,
       // Add other payment gateway public keys as needed
     };
 
     return NextResponse.json(config, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error fetching host config:', error);
-    return NextResponse.json({ message: 'Error fetching host config', error: error.message }, { status: 500 });
+    const errorMessage =
+      error instanceof Error ? error.message : 'An unknown error occurred';
+    return NextResponse.json(
+      { message: 'Error fetching host config', error: errorMessage },
+      { status: 500 }
+    );
   }
 }

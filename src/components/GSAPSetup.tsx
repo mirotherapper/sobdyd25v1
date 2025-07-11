@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useEffect } from 'react';
 import { gsap } from 'gsap';
@@ -30,8 +30,8 @@ export default function GSAPSetup() {
 
     // Set default ease and duration
     gsap.defaults({
-      ease: "power2.out",
-      duration: 0.6
+      ease: 'power2.out',
+      duration: 0.6,
     });
 
     // Initialize ScrollTrigger refresh
@@ -42,7 +42,7 @@ export default function GSAPSetup() {
       Draggable: !!Draggable,
       TextPlugin: !!TextPlugin,
       MotionPathPlugin: !!MotionPathPlugin,
-      useGSAP: !!useGSAP
+      useGSAP: !!useGSAP,
     });
   }, []);
 

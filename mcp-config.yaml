@@ -1,0 +1,192 @@
+# MCP Configuration for #TraxPlaya Application
+# Model Context Protocol configuration with security guardrails
+
+# Client configuration (replace with your actual client)
+claude: # or cursor, windsurf, etc.
+  traxplaya-server:
+    # Server connection settings
+    command: 'node'
+    args: ['./src/mcp-server.js']
+    env:
+      NODE_ENV: 'production'
+      LOG_LEVEL: 'info'
+
+    # Security Guardrails
+    guardrails:
+      # Block any tool calls or results containing secrets
+      secrets: block
+
+      # Custom guardrails for enhanced security
+      custom_guardrails:
+        # Filter tool results containing errors
+        - name: "Filter tool results with 'error'"
+          id: 'error_filter_guardrail'
+          action: block # Options: block, log
+          content: |
+            raise "An error was found in tool output." if:
+              (msg: ToolOutput)
+              "error" in msg.content.toLowerCase()
+
+        # Block sensitive database operations
+        - name: 'Block sensitive database operations'
+          id: 'db_security_guardrail'
+          action: block
+          content: |
+            raise "Sensitive database operation blocked." if:
+              (msg: ToolCall)
+              msg.tool_name == "database_query" and
+              (msg.arguments.query.includes("DROP") or
+               msg.arguments.query.includes("DELETE") or
+               msg.arguments.query.includes("TRUNCATE"))
+
+        # Block file system operations outside project directory
+        - name: 'Restrict file system access'
+          id: 'filesystem_guardrail'
+          action: block
+          content: |
+            raise "File system access outside project directory blocked." if:
+              (msg: ToolCall)
+              msg.tool_name == "file_operation" and
+              not msg.arguments.path.startsWith("/home/mirod/Documents/traxplaya-CODEDONE")
+
+        # Log but don't block authentication-related operations
+        - name: 'Monitor authentication operations'
+          id: 'auth_monitoring_guardrail'
+          action: log
+          content: |
+            console.log("Authentication operation detected") if:
+              (msg: ToolCall)
+              msg.tool_name.includes("auth") or
+              msg.arguments.toString().includes("password") or
+              msg.arguments.toString().includes("token")
+
+        # Block API calls to external services without proper validation
+        - name: 'External API validation'
+          id: 'external_api_guardrail'
+          action: block
+          content: |
+            raise "External API call requires validation." if:
+              (msg: ToolCall)
+              msg.tool_name == "http_request" and
+              not msg.arguments.url.startsWith("https://") and
+              not msg.arguments.headers.includes("Authorization")
+
+        # Monitor and log submission processing
+        - name: 'Monitor submission processing'
+          id: 'submission_monitoring_guardrail'
+          action: log
+          content: |
+            console.log("Submission processing detected:", msg.arguments) if:
+              (msg: ToolCall)
+              msg.tool_name.includes("submission") or
+              msg.arguments.toString().includes("playlist") or
+              msg.arguments.toString().includes("song")
+
+# Additional server configurations (if needed)
+cursor: # Alternative client configuration
+  traxplaya-dev-server:
+    command: 'npm'
+    args: ['run', 'mcp:dev']
+    env:
+      NODE_ENV: 'development'
+      DEBUG: 'mcp:*'
+
+    guardrails:
+      secrets: log # Less restrictive in development
+
+      custom_guardrails:
+        - name: 'Development error logging'
+          id: 'dev_error_log_guardrail'
+          action: log
+          content: |
+            console.log("Development error:", msg.content) if:
+              (msg: ToolOutput)
+              "error" in msg.content.toLowerCase()
+
+# Global MCP settings
+settings:
+  version: '1.0.0'
+  timeout: 30000 # 30 seconds
+  max_retries: 3
+
+  # Logging configuration
+  logging:
+    level: 'info'
+    file: './logs/mcp.log'
+    rotate: true
+    max_size: '10MB'
+    max_files: 5
+
+  # Rate limiting
+  rate_limit:
+    requests_per_minute: 60
+    burst_limit: 10
+
+  # Security settings
+  security:
+    enforce_https: true
+    validate_certificates: true
+    allowed_origins:
+      - 'https://localhost:3000'
+      - 'https://traxplaya-dev.vercel.app'
+      - 'https://traxplaya.com'
+
+    # Content filtering
+    content_filters:
+      - name: 'No personal information'
+        pattern: "\\b\\d{3}-\\d{2}-\\d{4}\\b" # SSN pattern
+        action: 'block'
+      - name: 'No credit card numbers'
+        pattern: "\\b\\d{4}[\\s-]?\\d{4}[\\s-]?\\d{4}[\\s-]?\\d{4}\\b"
+        action: 'block'
+      - name: 'No email addresses in logs'
+        pattern: "\\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Z|a-z]{2,}\\b"
+        action: 'redact'
+
+# Tool-specific configurations
+tools:
+  database_query:
+    max_execution_time: 10000 # 10 seconds
+    allowed_operations: ['SELECT', 'INSERT', 'UPDATE']
+    forbidden_operations: ['DROP', 'DELETE', 'TRUNCATE', 'ALTER']
+
+  file_operation:
+    allowed_extensions: ['.js', '.ts', '.json', '.yaml', '.yml', '.md', '.txt']
+    max_file_size: '10MB'
+    sandbox_path: '/home/mirod/Documents/traxplaya-CODEDONE'
+
+  http_request:
+    timeout: 15000 # 15 seconds
+    max_redirects: 5
+    allowed_methods: ['GET', 'POST', 'PUT', 'PATCH']
+    forbidden_methods: ['DELETE']
+
+    # Whitelist of allowed external services
+    allowed_hosts:
+      - 'api.spotify.com'
+      - 'www.googleapis.com'
+      - 'api.soundcloud.com'
+      - 'api.bandcamp.com'
+      - 'clerk.com'
+      - 'mongodb.com'
+
+# Environment-specific overrides
+environments:
+  development:
+    guardrails:
+      secrets: log
+    logging:
+      level: 'debug'
+    rate_limit:
+      requests_per_minute: 120
+
+  production:
+    guardrails:
+      secrets: block
+    logging:
+      level: 'warn'
+    rate_limit:
+      requests_per_minute: 30
+    security:
+      enforce_https: true
+      validate_certificates: true

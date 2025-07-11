@@ -32,9 +32,9 @@
                     "builder": "gcr.io/buildpacks/builder:v1"
                 }
             },
-            "image": "stayonbeat-new",
+            "image": "traxplaya",
             "service": {
-                "name": "stayonbeat-new",
+                "name": "traxplaya",
                 "containerPort": 8080,
                 "serviceAccountName": "mirothedj@gmail.com",
                 "resources": {
@@ -59,9 +59,9 @@
                     "builder": "gcr.io/buildpacks/builder:v1"
                 }
             },
-            "image": "stayonbeat-new",
+            "image": "traxplaya",
             "service": {
-                "name": "stayonbeat-new",
+                "name": "traxplaya",
                 "containerPort": 8080,
                 "serviceAccountName": "mirothedj@gmail.com",
                 "resources": {
@@ -86,9 +86,9 @@
                     "builder": "gcr.io/buildpacks/builder:v1"
                 }
             },
-            "image": "stayonbeat-new",
+            "image": "traxplaya",
             "service": {
-                "name": "stayonbeat-new",
+                "name": "traxplaya",
                 "containerPort": 8080,
                 "serviceAccountName": "mirothedj@gmail.com",
                 "resources": {

@@ -1,0 +1,309 @@
+# Playwright MCP Configuration for DoYouDj Application
+# Enhanced MCP config with Playwright integration for testing and automation
+
+# Extended client configuration with Playwright tools
+claude:
+  doyoudj-playwright-server:
+    # Main server with Playwright capabilities
+    command: 'node'
+    args: ['./src/mcp-server-playwright.js']
+    env:
+      NODE_ENV: 'development'
+      LOG_LEVEL: 'info'
+      PLAYWRIGHT_BROWSERS_PATH: './node_modules/@playwright/test/.local-browsers'
+      HEADLESS: 'true' # Set to false for debugging
+
+    # Enhanced guardrails for browser automation
+    guardrails:
+      secrets: block
+      
+      custom_guardrails:
+        # Playwright-specific security guardrails
+        - name: 'Block external domain navigation'
+          id: 'playwright_domain_guardrail'
+          action: block
+          content: |
+            raise "Navigation to external domain blocked." if:
+              (msg: ToolCall)
+              msg.tool_name == "playwright_navigate" and
+              not (msg.arguments.url.includes("localhost") or
+                   msg.arguments.url.includes("127.0.0.1") or
+                   msg.arguments.url.includes("doyoudj.com") or
+                   msg.arguments.url.includes("vercel.app"))
+
+        # Block file downloads outside project directory
+        - name: 'Restrict file downloads'
+          id: 'playwright_download_guardrail'
+          action: block
+          content: |
+            raise "File download outside project directory blocked." if:
+              (msg: ToolCall)
+              msg.tool_name == "playwright_download" and
+              not msg.arguments.path.startsWith("/home/mirod/Documents/stayonbeat-CODEDONE")
+
+        # Monitor form submissions and user interactions
+        - name: 'Monitor user interactions'
+          id: 'playwright_interaction_guardrail'
+          action: log
+          content: |
+            console.log("User interaction detected:", msg.arguments) if:
+              (msg: ToolCall)
+              (msg.tool_name == "playwright_fill" or
+               msg.tool_name == "playwright_click" or
+               msg.tool_name == "playwright_submit")
+
+        # Block sensitive authentication actions
+        - name: 'Block sensitive auth operations'
+          id: 'playwright_auth_guardrail'
+          action: block
+          content: |
+            raise "Sensitive authentication operation blocked." if:
+              (msg: ToolCall)
+              msg.tool_name.includes("playwright") and
+              (msg.arguments.toString().includes("password") or
+               msg.arguments.toString().includes("login") or
+               msg.arguments.toString().includes("credential"))
+
+# Playwright-specific tool configurations
+tools:
+  # Browser management tools
+  playwright_launch:
+    browser_types: ['chromium', 'firefox', 'webkit']
+    default_browser: 'chromium'
+    max_concurrent_browsers: 3
+    timeout: 30000
+    launch_options:
+      headless: true
+      viewport: { width: 1280, height: 720 }
+      device_scale_factor: 1
+    
+  playwright_navigate:
+    timeout: 15000
+    wait_until: 'networkidle'
+    allowed_protocols: ['http', 'https']
+    max_redirects: 5
+    
+  # Element interaction tools
+  playwright_click:
+    timeout: 10000
+    force: false
+    button: 'left'
+    click_count: 1
+    
+  playwright_fill:
+    timeout: 10000
+    clear: true
+    force: false
+    
+  playwright_wait:
+    max_timeout: 30000
+    default_timeout: 5000
+    polling_interval: 100
+    
+  # Screenshot and recording tools
+  playwright_screenshot:
+    path: './tests/screenshots/'
+    full_page: true
+    clip: null
+    quality: 80
+    type: 'png'
+    max_file_size: '5MB'
+    
+  playwright_record:
+    path: './tests/recordings/'
+    size: { width: 1280, height: 720 }
+    frame_rate: 25
+    quality: 'medium'
+    max_duration: 300000 # 5 minutes
+    
+  # Testing and assertion tools
+  playwright_assert:
+    timeout: 5000
+    ignore_case: false
+    trim_whitespace: true
+    
+  playwright_evaluate:
+    timeout: 10000
+    max_execution_time: 5000
+    allowed_functions: ['querySelector', 'querySelectorAll', 'textContent', 'getAttribute']
+    
+# DoYouDj-specific testing configurations
+testing:
+  # Submission workflow tests
+  submission_tests:
+    base_url: 'http://localhost:3000'
+    test_data:
+      youtube_url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'
+      spotify_url: 'https://open.spotify.com/track/4iV5W9uYEdYUVa79Axb7Rh'
+      test_message: 'Test submission from Playwright'
+      test_user: 'playwright-tester'
+    
+    test_scenarios:
+      - name: 'VIP Submission Flow'
+        steps:
+          - navigate: '/submit'
+          - fill: '[data-testid="url-input"]'
+          - select: '[data-testid="tier-select"]'
+          - fill: '[data-testid="message-input"]'
+          - click: '[data-testid="submit-button"]'
+          - wait: '[data-testid="success-message"]'
+          
+      - name: 'Queue Management'
+        steps:
+          - navigate: '/admin'
+          - wait: '[data-testid="queue-list"]'
+          - click: '[data-testid="play-next-button"]'
+          - assert: '[data-testid="now-playing"]'
+          
+      - name: 'Player Controls'
+        steps:
+          - navigate: '/admin'
+          - click: '[data-testid="play-button"]'
+          - wait: '[data-testid="player-playing"]'
+          - click: '[data-testid="pause-button"]'
+          - assert: '[data-testid="player-paused"]'
+
+  # Performance testing
+  performance_tests:
+    metrics:
+      - 'largest-contentful-paint'
+      - 'first-input-delay'
+      - 'cumulative-layout-shift'
+    thresholds:
+      lcp: 2500 # milliseconds
+      fid: 100   # milliseconds
+      cls: 0.1   # score
+      
+  # Accessibility testing
+  accessibility_tests:
+    standards: ['wcag2a', 'wcag2aa']
+    include_tags: ['best-practice']
+    exclude_tags: ['experimental']
+    
+# Automated test scheduling
+automation:
+  scheduled_tests:
+    # Daily smoke tests
+    - name: 'Daily Smoke Test'
+      schedule: '0 9 * * *' # 9 AM daily
+      tests: ['submission_flow', 'player_controls']
+      browsers: ['chromium']
+      
+    # Weekly full regression
+    - name: 'Weekly Regression'
+      schedule: '0 2 * * 0' # 2 AM Sunday
+      tests: ['all']
+      browsers: ['chromium', 'firefox', 'webkit']
+      
+    # Pre-deployment validation
+    - name: 'Pre-deployment'
+      trigger: 'on_build'
+      tests: ['critical_path']
+      browsers: ['chromium']
+      parallel: true
+
+# Integration with MPTh33ngn modules
+mpt33ngn_integration:
+  prethink:
+    # Analyze test patterns before execution
+    analyze_test_patterns: true
+    predict_failure_points: true
+    optimize_test_sequence: true
+    
+  afterthought:
+    # Post-test analysis
+    generate_insights: true
+    identify_improvements: true
+    suggest_additional_tests: true
+    
+  regrets:
+    # Learn from test failures
+    track_failure_patterns: true
+    prevent_regression: true
+    auto_improve_tests: true
+
+# Enhanced logging for Playwright
+logging:
+  playwright:
+    level: 'info'
+    file: './logs/playwright.log'
+    include_console: true
+    include_network: true
+    include_screenshots: true
+    
+  test_results:
+    file: './logs/test-results.json'
+    format: 'json'
+    include_timing: true
+    include_screenshots: true
+    include_videos: false # Set to true for debugging
+
+# Environment-specific Playwright settings
+environments:
+  development:
+    playwright:
+      headless: false
+      slow_mo: 100 # milliseconds between actions
+      devtools: true
+      
+  testing:
+    playwright:
+      headless: true
+      parallel: true
+      workers: 2
+      
+  production:
+    playwright:
+      headless: true
+      parallel: true
+      workers: 4
+      timeout: 60000
+
+# Security settings for browser automation
+security:
+  browser_security:
+    disable_web_security: false
+    ignore_https_errors: false
+    bypass_csp: false
+    
+  network_security:
+    proxy: null
+    block_requests:
+      - '*.google-analytics.com'
+      - '*.facebook.com'
+      - '*.twitter.com'
+    allow_requests:
+      - 'localhost:*'
+      - '127.0.0.1:*'
+      - '*.vercel.app'
+      - '*.doyoudj.com'
+
+# Custom commands for DoYouDj testing
+custom_commands:
+  # Test submission workflow
+  test_submission_flow:
+    description: 'Test complete submission to player workflow'
+    parameters:
+      - url: string
+      - tier: 'VIP' | 'Skip' | 'GA' | 'Free' | 'Random Reset'
+      - message: string
+    
+  # Test player functionality  
+  test_player_controls:
+    description: 'Test player play/pause/skip functionality'
+    parameters:
+      - action: 'play' | 'pause' | 'skip' | 'previous'
+      
+  # Test queue management
+  test_queue_operations:
+    description: 'Test queue reordering and management'
+    parameters:
+      - operation: 'reorder' | 'remove' | 'play_next'
+      - item_id: string
+      
+  # Performance testing
+  test_performance:
+    description: 'Run performance tests on specific pages'
+    parameters:
+      - pages: string[]
+      - metrics: string[]

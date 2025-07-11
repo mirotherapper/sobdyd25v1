@@ -1,67 +1,57 @@
-import { NextResponse } from 'next/server';
-import { connectToDatabase } from '../../../../../lib/mongodb';
-import { PlaylistData, PlaylistItemData } from '../../../../../lib/types';
-import { ObjectId } from 'mongodb';
+import { auth } from '@clerk/nextjs/server';
+import {
+  getActivePlaylist,
+  playNextTrack,
+} from '../../../../lib/services/api/playlistService';
+import {
+  createErrorResponse,
+  createSuccessResponse,
+  handleApiError,
+} from '../../../../lib/utils/api-utils';
 
-export async function POST(request: Request) {
-  const { client, db } = await connectToDatabase();
-  const session = client.startSession();
-
+export async function POST() {
   try {
-    let resultMessage = 'Track is now playing.';
-    await session.withTransaction(async () => {
-      // 1. Find the active playlist
-      const livePlaylist = await db.collection<PlaylistData>('playlists').findOne(
-        { is_show_archive: { $ne: true } },
-        { session }
+    // Get admin authentication
+    const { userId } = await auth();
+    if (!userId) {
+      return createErrorResponse(
+        'AuthenticationRequired',
+        'You must be signed in as an admin to advance the playlist',
+        401
       );
+    }
 
-      if (!livePlaylist) {
-        throw new Error('Live playlist not found');
-      }
+    // Get the active playlist
+    const activePlaylist = await getActivePlaylist();
+    if (!activePlaylist) {
+      return createErrorResponse('NotFound', 'No active playlist found', 404);
+    }
 
-      let items = livePlaylist.items || [];
+    // Check if playlist is locked
+    if (activePlaylist.isLocked) {
+      return createErrorResponse(
+        'PlaylistLocked',
+        'Cannot modify a locked playlist',
+        403
+      );
+    }
 
-      // 2. Find the top item in the queue
-      const queuedItems = items.filter(item => item.status === 'queued').sort((a, b) => a.position - b.position);
-      if (queuedItems.length === 0) {
-        resultMessage = 'Queue is empty. Nothing to play.';
-        // We can abort the transaction early if there's nothing to do.
-        await session.abortTransaction();
-        return;
-      }
-      const nextTrackToPlay = queuedItems[0];
-
-      // 3. Update statuses
-      items.forEach(item => {
-        // Move current 'now_playing' to 'played'
-        if (item.status === 'now_playing') {
-          item.status = 'played';
-        }
-        // Move the next track to 'now_playing'
-        if (item._id === nextTrackToPlay._id) {
-          item.status = 'now_playing';
-        }
+    try {
+      // Play the next track
+      const nextTrack = await playNextTrack((activePlaylist as any)._id);
+      return createSuccessResponse({
+        message: 'Track is now playing',
+        nowPlaying: nextTrack,
       });
-
-      // 4. Recalculate all positions to ensure data integrity
-      const newFullItemsList = items.map((item, index) => ({
-        ...item,
-        position: index,
-      }));
-
-      // 5. Update the entire playlist in the database
-      await db.collection('playlists').updateOne(
-        { _id: new ObjectId(livePlaylist._id) },
-        { $set: { items: newFullItemsList } },
-        { session }
-      );
-    });
-    return NextResponse.json({ message: resultMessage }, { status: 200 });
+    } catch (error) {
+      if (error instanceof Error && error.message === 'No tracks in queue') {
+        return createSuccessResponse({
+          message: 'Queue is empty. Nothing to play.',
+        });
+      }
+      throw error; // Re-throw for the outer catch block
+    }
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'An unknown server error occurred';
-    return NextResponse.json({ message: 'Error advancing playlist', error: errorMessage }, { status: 500 });
-  } finally {
-    await session.endSession();
+    return handleApiError(error);
   }
 }

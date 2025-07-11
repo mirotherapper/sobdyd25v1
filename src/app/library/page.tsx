@@ -1,11 +1,14 @@
-"use client";
+'use client';
 import React, { useState, useEffect, useCallback } from 'react';
-import { SongData, PlaylistItemData, PlaylistData, ArtistData } from '../../../lib/types';
+import Image from 'next/image';
+import { SongData, PlaylistData, ArtistData } from '../../../lib/types';
 
 export default function RecordsLibraryPage() {
   const [artists, setArtists] = useState<ArtistData[]>([]);
   const [songs, setSongs] = useState<SongData[]>([]);
-  const [archivedPlaylists, setArchivedPlaylists] = useState<PlaylistData[]>([]);
+  const [archivedPlaylists, setArchivedPlaylists] = useState<PlaylistData[]>(
+    []
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -36,12 +39,18 @@ export default function RecordsLibraryPage() {
       const playlistsRes = await fetch('/api/playlist-management');
       if (playlistsRes.ok) {
         const playlistsData = await playlistsRes.json();
-        setArchivedPlaylists(playlistsData.filter((p: PlaylistData) => p.is_show_archive));
+        setArchivedPlaylists(
+          playlistsData.filter((p: PlaylistData) => p.is_show_archive)
+        );
       } else {
-        throw new Error(`Failed to fetch playlists: ${playlistsRes.statusText}`);
+        throw new Error(
+          `Failed to fetch playlists: ${playlistsRes.statusText}`
+        );
       }
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(
+        err instanceof Error ? err.message : 'An unknown error occurred'
+      );
     } finally {
       setLoading(false);
     }
@@ -52,37 +61,60 @@ export default function RecordsLibraryPage() {
   }, [fetchData]);
 
   if (loading) {
-    return <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">Loading Records Library...</div>;
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-900 text-white">
+        Loading Records Library...
+      </div>
+    );
   }
 
   if (error) {
-    return <div className="min-h-screen bg-gray-900 text-red-500 flex items-center justify-center">Error: {error}</div>;
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-900 text-red-500">
+        Error: {error}
+      </div>
+    );
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-8">
-      <h1 className="text-4xl font-bold mb-8 text-center">Records Library</h1>
+    <div className="min-h-screen bg-gray-900 p-8 text-white">
+      <h1 className="mb-8 text-center text-4xl font-bold">Records Library</h1>
 
       <section className="mb-12">
-        <h2 className="text-3xl font-semibold mb-6">Artists</h2>
+        <h2 className="mb-6 text-3xl font-semibold">Artists</h2>
         {artists.length === 0 ? (
           <p className="text-gray-400">No artists found.</p>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {artists.map((artist) => (
-              <div key={artist._id} className="bg-gray-800 p-6 rounded-lg shadow-lg">
-                <img src={artist.profileImage || '/placeholder-user.jpg'} alt={artist.name} className="w-24 h-24 rounded-full mx-auto mb-4" />
-                <h3 className="text-xl font-bold text-center mb-2">{artist.name}</h3>
-                <p className="text-gray-400 text-sm text-center mb-4">{artist.bio || 'No bio available.'}</p>
-                <h4 className="text-lg font-semibold mb-2">Songs:</h4>
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {artists.map(artist => (
+              <div
+                key={artist._id}
+                className="rounded-lg bg-gray-800 p-6 shadow-lg"
+              >
+                <Image
+                  src={artist.profileImage || '/placeholder-user.jpg'}
+                  alt={artist.name}
+                  width={96}
+                  height={96}
+                  className="mx-auto mb-4 h-24 w-24 rounded-full"
+                />
+                <h3 className="mb-2 text-center text-xl font-bold">
+                  {artist.name}
+                </h3>
+                <p className="mb-4 text-center text-sm text-gray-400">
+                  {artist.bio || 'No bio available.'}
+                </p>
+                <h4 className="mb-2 text-lg font-semibold">Songs:</h4>
                 {artist.songs && artist.songs.length > 0 ? (
-                  <ul className="list-disc list-inside text-gray-300">
-                    {artist.songs.map((song) => (
+                  <ul className="list-inside list-disc text-gray-300">
+                    {artist.songs.map(song => (
                       <li key={song._id}>{song.title}</li>
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-gray-500 text-sm">No songs by this artist yet.</p>
+                  <p className="text-sm text-gray-500">
+                    No songs by this artist yet.
+                  </p>
                 )}
               </div>
             ))}
@@ -91,18 +123,33 @@ export default function RecordsLibraryPage() {
       </section>
 
       <section className="mb-12">
-        <h2 className="text-3xl font-semibold mb-6">All Songs</h2>
+        <h2 className="mb-6 text-3xl font-semibold">All Songs</h2>
         {songs.length === 0 ? (
           <p className="text-gray-400">No songs found.</p>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {songs.map((song) => (
-              <div key={song._id} className="bg-gray-800 p-6 rounded-lg shadow-lg flex items-center space-x-4">
-                <img src={song.artwork || '/placeholder.jpg'} alt={song.title} className="w-16 h-16 rounded-md" />
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {songs.map(song => (
+              <div
+                key={song._id}
+                className="flex items-center space-x-4 rounded-lg bg-gray-800 p-6 shadow-lg"
+              >
+                <Image
+                  src={song.artwork || '/placeholder.jpg'}
+                  alt={song.title}
+                  width={64}
+                  height={64}
+                  className="h-16 w-16 rounded-md"
+                />
                 <div>
                   <h3 className="text-xl font-bold">{song.title}</h3>
-                  <p className="text-gray-400">{typeof song.artist === 'string' ? song.artist : song.artist.name}</p>
-                  <p className="text-sm text-gray-500">Platform: {song.platform}</p>
+                  <p className="text-gray-400">
+                    {typeof song.artist === 'string'
+                      ? song.artist
+                      : song.artist.name}
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    Platform: {song.platform}
+                  </p>
                 </div>
               </div>
             ))}
@@ -111,27 +158,43 @@ export default function RecordsLibraryPage() {
       </section>
 
       <section>
-        <h2 className="text-3xl font-semibold mb-6">Archived Show Playlists</h2>
+        <h2 className="mb-6 text-3xl font-semibold">Archived Show Playlists</h2>
         {archivedPlaylists.length === 0 ? (
           <p className="text-gray-400">No archived playlists found.</p>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {archivedPlaylists.map((playlist) => (
-              <div key={playlist._id} className="bg-gray-800 p-6 rounded-lg shadow-lg">
-                <h3 className="text-xl font-bold mb-2">{playlist.name}</h3>
-                <p className="text-gray-400 text-sm mb-2">Created: {new Date(playlist.created_at).toLocaleDateString()}</p>
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+            {archivedPlaylists.map(playlist => (
+              <div
+                key={playlist._id}
+                className="rounded-lg bg-gray-800 p-6 shadow-lg"
+              >
+                <h3 className="mb-2 text-xl font-bold">{playlist.name}</h3>
+                <p className="mb-2 text-sm text-gray-400">
+                  Created: {new Date(playlist.created_at).toLocaleDateString()}
+                </p>
                 {playlist.finalized_at && (
-                  <p className="text-gray-400 text-sm mb-2">Finalized: {new Date(playlist.finalized_at).toLocaleDateString()}</p>
+                  <p className="mb-2 text-sm text-gray-400">
+                    Finalized:{' '}
+                    {new Date(playlist.finalized_at).toLocaleDateString()}
+                  </p>
                 )}
-                <h4 className="text-lg font-semibold mb-2">Tracks:</h4>
+                <h4 className="mb-2 text-lg font-semibold">Trax:</h4>
                 {playlist.items && playlist.items.length > 0 ? (
-                  <ul className="list-disc list-inside text-gray-300">
-                    {playlist.items.map((item) => (
-                      <li key={item._id}>{item.song.title} by {typeof item.song.artist === 'string' ? item.song.artist : item.song.artist.name} (Tier: {item.tier})</li>
+                  <ul className="list-inside list-disc text-gray-300">
+                    {playlist.items.map(item => (
+                      <li key={item._id}>
+                        {item.song.title} by{' '}
+                        {typeof item.song.artist === 'string'
+                          ? item.song.artist
+                          : item.song.artist.name}{' '}
+                        (Tier: {item.tier})
+                      </li>
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-gray-500 text-sm">No tracks in this playlist.</p>
+                  <p className="text-sm text-gray-500">
+                    No trax in this playlist.
+                  </p>
                 )}
               </div>
             ))}
